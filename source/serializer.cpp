@@ -4,34 +4,14 @@
 #include <sstream>
 #include <format>
 #include <nlohmann/json.hpp>
+#include "crypto.h"
 #include "serializer.h"
+#include "util.h"
 
 using json = nlohmann::json;
-
+using namespace Util;
 namespace Serializer {
     
-std::vector<uint8_t> getAsVector(const std::string& hex) {
-    std::vector<uint8_t> bytes;
-
-    for (unsigned int i = 0; i < hex.length(); i += 2) {
-        auto byteString = hex.substr(i, 2);
-        uint8_t byte = std::strtol(byteString.c_str(), NULL, 16);
-        bytes.push_back(byte);
-    }
-    
-    return bytes;
-}
-
-std::string getAsString(const std::vector<uint8_t>& bytes) {
-    std::ostringstream output;
-
-    for (unsigned int i = 0; i < bytes.size(); i++) {
-        output << std::format("{:02x}", bytes[i]);
-    }
-
-    return output.str();
-}
-
 auto genCompactInt(const auto &num) {
     if (num >= 0 && num <= 252)
         return std::format("{:02x}", std::byteswap(static_cast<uint8_t>(num)));
@@ -43,7 +23,7 @@ auto genCompactInt(const auto &num) {
     return std::format("{:016x}", std::byteswap(static_cast<uint64_t>(num)));
 }
 
-std::string genRawFromJson(const json& data) {
+std::string genRaw(const json& data) {
     std::ostringstream rawTx;
 
     int version = data["version"];
@@ -87,7 +67,7 @@ std::string genRawFromJson(const json& data) {
     return rawTx.str();
 }
 
-std::string getForVerificationFromJson(const json& data) {
+std::string getOrigSerialization(const json& data) {
     std::ostringstream rawTx;
 
     int version = data["version"];
@@ -105,9 +85,19 @@ std::string getForVerificationFromJson(const json& data) {
         uint32_t vout_idx = vin["vout"];
         rawTx << std::format("{:08x}", std::byteswap(vout_idx));
 
-        std::string scriptPubKey = vin["prevout"]["scriptpubkey"];
-        rawTx << genCompactInt(scriptPubKey.length() / 2); // each character is a single nyble
-        rawTx << scriptPubKey;
+        if (vin["prevout"]["scriptpubkey_type"] == "p2sh") {
+            // get redeem script
+            std::string scriptPubKey = vin["scriptsig_asm"];
+            auto idx = scriptPubKey.rfind(" ") + 1;
+            scriptPubKey = scriptPubKey.substr(idx);
+
+            rawTx << genCompactInt(scriptPubKey.length() / 2);
+            rawTx << scriptPubKey;
+        } else {
+            std::string scriptPubKey = vin["prevout"]["scriptpubkey"];
+            rawTx << genCompactInt(scriptPubKey.length() / 2); // each character is a single nyble
+            rawTx << scriptPubKey;
+        }
 
         uint32_t sequence = vin["sequence"];
         rawTx << std::format("{:08x}", std::byteswap(sequence));
@@ -124,6 +114,81 @@ std::string getForVerificationFromJson(const json& data) {
         rawTx << genCompactInt(scriptPubKey.length() / 2); // each character is a single nyble
         rawTx << scriptPubKey;
     }
+
+    uint32_t lockTime = data["locktime"];
+    rawTx << std::format("{:08x}", std::byteswap(lockTime));
+    rawTx << "01000000"; // Eeeks, fixme
+
+    return rawTx.str();
+}
+
+std::string getBIP143Serialization(const json &data, unsigned int idx) {
+    std::ostringstream rawTx, vinOutpoints, vinSeq, outPoint, voutOutpoints;
+
+    int version = data["version"];
+    rawTx << std::format("{:08x}", std::byteswap(version));
+
+    for (unsigned int i = 0; i < data["vin"].size(); i++) {
+        const auto& vin = data["vin"][i];
+        auto txID = getAsVector(vin["txid"]);
+        for (int j = txID.size() - 1; j >= 0; j--) {
+            vinOutpoints << std::format("{:02x}", txID[j]);
+        }
+
+        uint32_t vout_idx = vin["vout"];
+        vinOutpoints << std::format("{:08x}", std::byteswap(vout_idx));
+
+        uint32_t sequence = vin["sequence"];
+        vinSeq << std::format("{:08x}", std::byteswap(sequence));
+    }
+
+    rawTx << Crypto::getSHA256<std::string>(Crypto::getSHA256(getAsVector(vinOutpoints.str())));
+    rawTx << Crypto::getSHA256<std::string>(Crypto::getSHA256(getAsVector(vinSeq.str())));
+
+    const auto& vinAtIdx = data["vin"][idx];
+    auto txID = getAsVector(vinAtIdx["txid"]);
+    uint32_t vout_idx = vinAtIdx["vout"];
+
+    for (int j = txID.size() - 1; j >= 0; j--)
+        outPoint << std::format("{:02x}", txID[j]);
+    outPoint << std::format("{:08x}", std::byteswap(vout_idx));
+
+    rawTx << outPoint.str();
+
+    if (vinAtIdx["prevout"]["scriptpubkey_type"] == "v0_p2wsh") {
+        const auto last = vinAtIdx["witness"].size() - 1;
+        const std::string witnessScript = vinAtIdx["witness"][last];
+
+        rawTx << genCompactInt(witnessScript.length() / 2);
+        rawTx << witnessScript;
+    } else if (vinAtIdx["prevout"]["scriptpubkey_type"] == "p2sh" && vinAtIdx.contains("witness")) {
+        std::string redeemScript = vinAtIdx["scriptsig"];
+        redeemScript = redeemScript.substr(6);
+        
+        rawTx << "1976a914" + redeemScript + "88ac";
+    } else {
+        const std::string scriptPubKey = vinAtIdx["prevout"]["scriptpubkey"];
+        const auto& pubKeyHash = scriptPubKey.substr(4);
+
+        rawTx << "1976a914" + pubKeyHash + "88ac";
+    }
+
+    uint64_t value = vinAtIdx["prevout"]["value"];
+    rawTx << std::format("{:016x}", std::byteswap(value));
+
+    uint32_t sequence = vinAtIdx["sequence"];
+    rawTx << std::format("{:08x}", std::byteswap(sequence));
+
+    for (const auto& vout : data["vout"]) {
+        uint64_t value = vout["value"];
+        voutOutpoints << std::format("{:016x}", std::byteswap(value));
+
+        std::string scriptPubKey = vout["scriptpubkey"];
+        voutOutpoints << genCompactInt(scriptPubKey.length() / 2); // each character is a single nyble
+        voutOutpoints << scriptPubKey;
+    }
+
+    rawTx << Crypto::getSHA256<std::string>(Crypto::getSHA256(getAsVector(voutOutpoints.str())));
 
     uint32_t lockTime = data["locktime"];
     rawTx << std::format("{:08x}", std::byteswap(lockTime));

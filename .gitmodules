@@ -1,0 +1,3 @@
+[submodule "source/Hash"]
+	path = source/Hash
+	url = https://github.com/Chocobo1/Hash

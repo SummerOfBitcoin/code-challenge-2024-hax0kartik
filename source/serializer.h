@@ -7,12 +7,11 @@
 using json = nlohmann::json;
 
 namespace Serializer {
-    
-std::vector<uint8_t> getAsVector(const std::string& hex);
-std::string getAsString(const std::vector<uint8_t>& bytes);
+
 auto genCompactInt(const auto &num);
-std::string genRawFromJson(const json& data);
-std::string getForVerificationFromJson(const json& data);
+std::string genRaw(const json& data);
+std::string getOrigSerialization(const json& data);
+std::string getBIP143Serialization(const json& data, unsigned int idx);
 
 }
 

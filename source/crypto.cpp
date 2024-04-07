@@ -1,66 +1,36 @@
+#include "crypto.h"
+#include <cstdint>
 #include <vector>
 #include <format>
 #include <iostream>
 #include <string>
 #include <cstdlib>
-#include <openssl/evp.h>
 #include <secp256k1.h>
-#include "serializer.h"
+#include "source/Hash/src/ripemd_160.h"
+#include "util.h"
+#include "Hash/src/sha2_256.h"
+#include "Hash/src/ripemd_160.h"
 
 namespace Crypto {
 
-std::vector<uint8_t> getSHA256(const std::vector<uint8_t>& bytes) {
-    EVP_MD_CTX *mdCtx = EVP_MD_CTX_new();
-    std::vector<uint8_t> md(32); // 256 bits output
-    unsigned int mdLen, i;
-
-    if (!EVP_DigestInit_ex(mdCtx, EVP_sha256(), nullptr)) {
-        std::cout << "Message digest initialization failed.\n";
-        EVP_MD_CTX_free(mdCtx);
-        return {0};
-    }
-
-    if (!EVP_DigestUpdate(mdCtx, bytes.data(), bytes.size())) {
-        std::cout << "Message digest update failed.\n";
-        EVP_MD_CTX_free(mdCtx);
-        return {0};
-    }
-
-    if (!EVP_DigestFinal_ex(mdCtx, md.data(), &mdLen)) {
-        std::cout << "Message digest finalization failed.\n";
-        EVP_MD_CTX_free(mdCtx);
-        return {0};
-    }
-    
-    EVP_MD_CTX_free(mdCtx);
-    return md;
+template <>
+std::string getSHA256(const std::vector<uint8_t>& bytes) {
+    return Chocobo1::SHA2_256().addData(bytes).finalize().toString();
 }
 
+template <>
+std::vector<uint8_t> getSHA256(const std::vector<uint8_t>& bytes) {
+    return Chocobo1::SHA2_256().addData(bytes).finalize().toVector();
+}
+
+template <>
+std::string getRIPEMD160(const std::vector<uint8_t>& bytes) {
+    return Chocobo1::RIPEMD_160().addData(bytes).finalize().toString();
+}
+
+template <>
 std::vector<uint8_t> getRIPEMD160(const std::vector<uint8_t>& bytes) {
-    EVP_MD_CTX *mdCtx = EVP_MD_CTX_new();
-    std::vector<uint8_t> md(20); // 160 bits output
-    unsigned int mdLen, i;
-
-    if (!EVP_DigestInit_ex(mdCtx, EVP_ripemd160(), nullptr)) {
-        std::cout << "Message digest initialization failed.\n";
-        EVP_MD_CTX_free(mdCtx);
-        return {0};
-    }
-
-    if (!EVP_DigestUpdate(mdCtx, bytes.data(), bytes.size())) {
-        std::cout << "Message digest update failed.\n";
-        EVP_MD_CTX_free(mdCtx);
-        return {0};
-    }
-
-    if (!EVP_DigestFinal_ex(mdCtx, md.data(), &mdLen)) {
-        std::cout << "Message digest finalization failed.\n";
-        EVP_MD_CTX_free(mdCtx);
-        return {0};
-    }
-    
-    EVP_MD_CTX_free(mdCtx);
-    return md;
+    return Chocobo1::RIPEMD_160().addData(bytes).finalize().toVector();
 }
 
 /** This function is taken from the libsecp256k1 distribution and implements
@@ -214,9 +184,9 @@ static int ecdsa_signature_parse_der_lax(const secp256k1_context* ctx, secp256k1
 }
 
 bool verifyECDSA(const std::string& pubKey, const std::string& signature, const std::string& msg) {
-    const std::vector<uint8_t> pubKeyAsBytes = Serializer::getAsVector(pubKey);
-    const std::vector<uint8_t> signatureAsBytes = Serializer::getAsVector(signature);
-    const std::vector<uint8_t> msgAsBytes = Serializer::getAsVector(msg);
+    const std::vector<uint8_t> pubKeyAsBytes = Util::getAsVector(pubKey);
+    const std::vector<uint8_t> signatureAsBytes = Util::getAsVector(signature);
+    const std::vector<uint8_t> msgAsBytes = Util::getAsVector(msg);
 
     const std::vector<uint8_t> digest = getSHA256(getSHA256(msgAsBytes));
 
