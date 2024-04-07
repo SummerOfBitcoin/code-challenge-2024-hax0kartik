@@ -1,18 +1,15 @@
-#ifndef SERIALIZER_H
-#define SERIALIZER_H
+#pragma once
 
 #include <string>
-#include <nlohmann/json.hpp>
 
-using json = nlohmann::json;
-
+namespace Tx {
+struct Tx;
+}
 namespace Serializer {
 
 auto genCompactInt(const auto &num);
-std::string genRaw(const json& data);
-std::string getOrigSerialization(const json& data);
-std::string getBIP143Serialization(const json& data, unsigned int idx);
+std::string genRaw(const Tx::Tx& t);
+std::string getOrigSerialization(const Tx::Tx& t);
+std::string getBIP143Serialization(const Tx::Tx& t, unsigned int idx);
 
 }
-
-#endif // SERIALIZER_H

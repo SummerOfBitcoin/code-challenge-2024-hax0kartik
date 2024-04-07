@@ -1,5 +1,4 @@
-#ifndef CRYPTO_H
-#define CRYPTO_H
+#pragma once
 
 #include <cstdint>
 #include <string>
@@ -19,5 +18,3 @@ T getRIPEMD160(const std::vector<uint8_t>& bytes);
 bool verifyECDSA(const std::string& pubKey, const std::string& signature, const std::string& msg);
 
 }
-
-#endif // CRYPTO_H
