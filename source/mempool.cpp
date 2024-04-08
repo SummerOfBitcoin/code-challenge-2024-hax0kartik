@@ -1,5 +1,6 @@
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include "mempool.h"
 #include "source/tx.h"
 

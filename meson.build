@@ -1,6 +1,6 @@
 project('SoB', 'cpp',
   version : '0.1',
-  default_options : ['warning_level=3', 'cpp_std=gnu++23'])
+  default_options : ['warning_level=3', 'cpp_std=gnu++23', 'buildtype=release'])
 
 add_global_arguments('-fexperimental-library', '-stdlib=libc++', language: 'cpp')
 add_global_link_arguments('-stdlib=libc++', language: 'cpp')

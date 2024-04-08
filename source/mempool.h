@@ -1,4 +1,5 @@
 #pragma once
+#include <memory>
 #include <vector>
 #include "tx.h"
 
@@ -8,7 +9,7 @@ class Mempool {
         void initFromFolder(const std::string& s);
         void addFile(const std::string& s);
 
-        auto& getTransactions() const {
+        auto& getTransactions() {
             return transactions;
         }
 

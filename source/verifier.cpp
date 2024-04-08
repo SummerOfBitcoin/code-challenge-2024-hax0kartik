@@ -1,10 +1,16 @@
 #include <iostream>
+#include <mutex>
+#include <span>
 #include <string>
+#include <list>
 #include <functional>
+#include <thread>
 #include <unordered_map>
+#include <vector>
 #include "verifier.h"
 #include "script.h"
 #include "serializer.h"
+#include "source/tx.h"
 
 namespace TxVerifier {
 
@@ -107,8 +113,7 @@ bool do_p2tr(const Tx::Tx& tx, unsigned int vIdx) {
     return false;
 }
 
-void verify(const std::vector<Tx::Tx>& transactions) {
-
+void verify(std::vector<Tx::Tx>& transactions) {
     std::unordered_map<std::string, std::array<int, 2>> stats {
         {"p2pkh",     {0, 0}},
         {"p2sh",      {0, 0}},
@@ -124,20 +129,51 @@ void verify(const std::vector<Tx::Tx>& transactions) {
         {"v1_p2tr", do_p2tr}
     };
 
-    for (const auto& tx : transactions) {
-        for (unsigned int i = 0; i < tx.txIns.size(); i++) {
-            const auto& vin = tx.txIns[i];
-            const auto& type = vin.prevout.scriptpubkeyType;
+    std::list<Tx::Tx> txlist {};
+    std::mutex mut {};
 
-            bool ok = funcs[type](tx, i);
-            if (!ok) {
-                std::cout << "Script verification failed!" << std::endl;
-                stats[type][1]++;
-                break;
-            } else
-                stats[type][0]++;
-        }
+    const auto n = std::thread::hardware_concurrency();
+    auto in_each_span = transactions.size() / n;
+
+    std::cout << "Executing verification on " << n << " threads, per thread: " << in_each_span << std::endl;
+    std::cout << "Total: " << transactions.size() << std::endl;
+
+    std::vector<std::thread> threads;
+
+    for (int i = 0; i < n; i++) {
+        auto span = std::span(transactions.begin() + (i * in_each_span), in_each_span);
+        if (i == n - 1)
+            span = std::span(transactions.begin() + (i * in_each_span), transactions.end());
+
+        threads.emplace_back([&mut, &funcs, &stats, span, &txlist](){
+            for (auto& tx: span) {
+                bool ok = true;
+                for (unsigned int i = 0; i < tx.txIns.size() && ok; i++) {
+                    const auto& vin = tx.txIns[i];
+                    const auto& type = vin.prevout.scriptpubkeyType;
+
+                    ok = funcs[type](tx, i);
+
+                    std::lock_guard guard(mut);
+                    if (!ok) {
+                        stats[type][1]++;
+                        break;
+                    } else {
+                        stats[type][0]++;
+                    }
+                }
+                
+                if (ok) {
+                    std::lock_guard guard(mut);
+                    txlist.push_back(std::move(tx));
+                }
+            }
+
+        });
     }
+
+    for (auto& t : threads) 
+        t.join();
 
     // Print stats
     for (auto& [e, v] : stats)

@@ -1,5 +1,6 @@
 #include "mempool.h"
 #include "verifier.h"
+#include "block.h"
 
 int main() {
     /* first, lets get all files in the mempool */
@@ -15,6 +16,8 @@ int main() {
     mempool.initFromFolder("../mempool");
 
     TxVerifier::verify(mempool.getTransactions());
+
+    Block block;
 
     return 0;
 }

@@ -1,9 +1,10 @@
 #pragma once
 #include "tx.h"
+#include <memory>
 #include <vector>
 
 namespace TxVerifier {
 
-void verify(const std::vector<Tx::Tx>& transactions);
+void verify(std::vector<Tx::Tx>& transactions);
 
 };
