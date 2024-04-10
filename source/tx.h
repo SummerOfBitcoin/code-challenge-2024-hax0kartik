@@ -37,13 +37,21 @@ struct Tx {
     std::vector<uint8_t> txid {};
     std::string txidHash {};
 
+    std::vector<uint8_t> wTxid {};
+
     uint32_t version {};
+
+    // these are only included in transcation is Segwit
+    uint8_t marker {0};
+    uint8_t flag {1};
+
     uint32_t lockTime {};
 
     std::vector<TxIn> txIns {};
     std::vector<TxOut> txOuts {};
 
     int64_t fees {};
+    uint32_t weight {};
 
     void calcFees();
 

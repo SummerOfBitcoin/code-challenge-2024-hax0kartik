@@ -95,7 +95,7 @@ bool do_p2wsh(const Tx::Tx& tx, unsigned int vIdx) {
 
     const std::string s = "OP_DUP OP_SHA256 OP_PUSHBYTES_32 " + redeemScriptHash + " OP_EQUAL";
     if (script.exec(s) == false) {
-        std::cout << "Failed!";
+        //std::cout << "Failed!";
         return false;
     }
 
@@ -113,7 +113,7 @@ bool do_p2tr(const Tx::Tx& tx, unsigned int vIdx) {
     return false;
 }
 
-void verify(std::vector<Tx::Tx>& transactions) {
+void verify(std::vector<Tx::Tx>& transactions, std::list<Tx::Tx>& verifiedTx) {
     std::unordered_map<std::string, std::array<int, 2>> stats {
         {"p2pkh",     {0, 0}},
         {"p2sh",      {0, 0}},
@@ -129,14 +129,13 @@ void verify(std::vector<Tx::Tx>& transactions) {
         {"v1_p2tr", do_p2tr}
     };
 
-    std::list<Tx::Tx> txlist {};
     std::mutex mut {};
 
     const auto n = std::thread::hardware_concurrency();
     auto in_each_span = transactions.size() / n;
 
-    std::cout << "Executing verification on " << n << " threads, per thread: " << in_each_span << std::endl;
-    std::cout << "Total: " << transactions.size() << std::endl;
+    //std::cout << "Executing verification on " << n << " threads, per thread: " << in_each_span << std::endl;
+    //std::cout << "Total: " << transactions.size() << std::endl;
 
     std::vector<std::thread> threads;
 
@@ -145,7 +144,7 @@ void verify(std::vector<Tx::Tx>& transactions) {
         if (i == n - 1)
             span = std::span(transactions.begin() + (i * in_each_span), transactions.end());
 
-        threads.emplace_back([&mut, &funcs, &stats, span, &txlist](){
+        threads.emplace_back([&mut, &funcs, &stats, span, &verifiedTx](){
             for (auto& tx: span) {
                 bool ok = true;
                 for (unsigned int i = 0; i < tx.txIns.size() && ok; i++) {
@@ -165,7 +164,7 @@ void verify(std::vector<Tx::Tx>& transactions) {
                 
                 if (ok) {
                     std::lock_guard guard(mut);
-                    txlist.push_back(std::move(tx));
+                    verifiedTx.push_back(std::move(tx));
                 }
             }
 
@@ -176,7 +175,7 @@ void verify(std::vector<Tx::Tx>& transactions) {
         t.join();
 
     // Print stats
-    for (auto& [e, v] : stats)
-        std::cout << "Type: " << e << " Passed: " << v[0] << " Failed: " << v[1] << std::endl; 
+    //for (auto& [e, v] : stats)
+    //    std::cout << "Type: " << e << " Passed: " << v[0] << " Failed: " << v[1] << std::endl; 
 }
 }

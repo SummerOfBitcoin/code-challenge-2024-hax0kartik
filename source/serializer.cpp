@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <string>
 #include <format>
+#include "block.h"
 #include "crypto.h"
 #include "serializer.h"
 #include "tx.h"
@@ -14,18 +15,32 @@ auto genCompactInt(const auto &num) {
     if (num >= 0 && num <= 252)
         return std::format("{:02x}", std::byteswap<uint8_t>(num));
     else if (num >= 253 && num <= 0xffff)
-        return std::format("{:04x}", std::byteswap<uint16_t>(num));
+        return std::format("fd{:04x}", std::byteswap<uint16_t>(num));
     else if (num >= 0x10000 and num <= 0xffffffff)
-        return std::format("{:08x}", std::byteswap<uint32_t>(num));
+        return std::format("fe{:08x}", std::byteswap<uint32_t>(num));
 
-    return std::format("{:016x}", std::byteswap<uint64_t>(num));
+    return std::format("ff{:016x}", std::byteswap<uint64_t>(num));
 }
 
-std::string genRaw(const Tx::Tx& tx) {
+std::string genRaw(const Tx::Tx& tx, bool forceLegacy) {
     std::string rawTx;
     rawTx.reserve(8192);
 
+    bool isSegwit = false;
+    for (const auto& txin : tx.txIns) {
+        isSegwit = txin.witness.size() > 0;
+        if (isSegwit)
+            break;
+    }
+
+    isSegwit = !forceLegacy && isSegwit;
+
     rawTx += std::format("{:08x}", std::byteswap(tx.version));
+
+    if (isSegwit) {
+        rawTx += std::format("{:02x}", tx.marker);
+        rawTx += std::format("{:02x}", tx.flag);
+    }
 
     rawTx += genCompactInt(tx.txIns.size());
 
@@ -52,6 +67,17 @@ std::string genRaw(const Tx::Tx& tx) {
 
         rawTx += genCompactInt(vout.scriptPubKey.length() / 2); // each character is a single nyble
         rawTx += vout.scriptPubKey;
+    }
+
+    if (isSegwit) {
+        for (const auto& vin: tx.txIns) {
+            rawTx += genCompactInt(vin.witness.size());
+
+            for (const auto& w : vin.witness) {
+                rawTx += genCompactInt(w.length() / 2);
+                rawTx += w;
+            }
+        }
     }
 
     rawTx += std::format("{:08x}", std::byteswap(tx.lockTime));
@@ -183,4 +209,24 @@ std::string getBIP143Serialization(const Tx::Tx& tx, unsigned int idx) {
 
     return rawTx;
 }
+
+std::string getBlockHeaderSerialization(const Block &b) {
+    std::string rawBlock {};
+    rawBlock.reserve(100);
+
+    rawBlock += std::format("{:08x}", std::byteswap(b.version));
+    for (int j = b.prevBlkHash.size() - 1; j >= 0; j--)
+        rawBlock += std::format("{:02x}", b.prevBlkHash[j]);
+
+    for (int j = b.merkleRoot.size() - 1; j >= 0; j--)
+        rawBlock += std::format("{:02x}", b.merkleRoot[j]);
+
+    rawBlock += std::format("{:08x}", std::byteswap(b.time));
+    rawBlock += std::format("{:08x}", std::byteswap(b.bits));
+
+    // nonce is added manually by the mining function
+
+    return rawBlock;
+}
+
 }

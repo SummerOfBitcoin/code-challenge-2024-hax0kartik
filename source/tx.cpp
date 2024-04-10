@@ -42,9 +42,19 @@ Tx::Tx(const json& j) {
 
     auto raw = Serializer::genRaw(*this);
     auto rawAsBytes = Util::getAsVector(raw);
+    weight = rawAsBytes.size() * 3;
+
     txid = Crypto::getSHA256(Crypto::getSHA256(rawAsBytes));
     std::reverse(txid.begin(), txid.end());
     txidHash = Crypto::getSHA256<std::string>(txid);
+
+    raw = Serializer::genRaw(*this, false);
+    rawAsBytes = Util::getAsVector(raw);
+    weight += rawAsBytes.size();
+
+    wTxid = Crypto::getSHA256(Crypto::getSHA256(rawAsBytes));
+    std::reverse(wTxid.begin(), wTxid.end());
+
 
     calcFees();
 }

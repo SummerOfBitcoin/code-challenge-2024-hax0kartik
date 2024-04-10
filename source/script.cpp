@@ -162,7 +162,7 @@ bool Script::exec(const std::string& opstr) {
         } else if (buf.find("OP_0") != std::string::npos) {
             stack.push("");
         } else {
-            std::cout << "Unknown OpCode: " << buf << std::endl;
+            //std::cout << "Unknown OpCode: " << buf << std::endl;
             return false;
         }
     }
