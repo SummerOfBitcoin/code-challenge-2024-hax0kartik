@@ -75,7 +75,7 @@ int main() {
     for (const auto& tx : verified2)
         txids.push_back(tx.txid);
 
-    auto witnessRootHash = Block::calcMerkleRoot(wTxids);
+    auto witnessRootHash = Block::Block::calcMerkleRoot(wTxids);
     //std::cout << "WitnessRootHash: " << Util::getAsString(witnessRootHash);
     auto zeroesVec = Util::getAsVector(zeroes); 
     witnessRootHash.insert(witnessRootHash.end(), zeroesVec.begin(), zeroesVec.end());
@@ -96,7 +96,7 @@ int main() {
 
     //std::cout << "Serialized coinbase: " << serCoinBase << std::endl;
 
-    Block block;
+    Block::Block block;
     block.version = 0x20000000;
 
     //target = "0000ffff00000000000000000000000000000000000000000000000000000000"
@@ -104,7 +104,7 @@ int main() {
     static constexpr auto bits = 0x1f00ffff;
     block.bits = bits;
     block.prevBlkHash = zeroesVec;
-    block.merkleRoot = Block::calcMerkleRoot(txids);
+    block.merkleRoot = Block::Block::calcMerkleRoot(txids);
     std::reverse(block.merkleRoot.begin(), block.merkleRoot.end());
 
     block.time = std::time(0);

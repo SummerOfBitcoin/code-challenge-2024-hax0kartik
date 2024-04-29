@@ -3,6 +3,8 @@
 #include "source/util.h"
 #include <vector>
 
+namespace Block {
+
 std::vector<uint8_t> Block::calcMerkleRoot(const std::vector<std::vector<uint8_t>>& txIds) {
     std::vector<std::vector<uint8_t>> level(txIds.begin(), txIds.end());
     std::vector<std::vector<uint8_t>> newlevel {};
@@ -27,4 +29,6 @@ std::vector<uint8_t> Block::calcMerkleRoot(const std::vector<std::vector<uint8_t
     }
 
     return level[0];
+}
+
 }

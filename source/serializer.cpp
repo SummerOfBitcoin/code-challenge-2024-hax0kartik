@@ -210,7 +210,7 @@ std::string getBIP143Serialization(const Tx::Tx& tx, unsigned int idx) {
     return rawTx;
 }
 
-std::string getBlockHeaderSerialization(const Block &b) {
+std::string getBlockHeaderSerialization(const Block::Block &b) {
     std::string rawBlock {};
     rawBlock.reserve(100);
 
