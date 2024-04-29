@@ -9,7 +9,7 @@ std::vector<uint8_t> Block::calcMerkleRoot(const std::vector<std::vector<uint8_t
 
     bool firstLevel = true;
     while (level.size() > 1) {
-        for (int i = 0; i < level.size(); i += 2) {
+        for (uint i = 0; i < level.size(); i += 2) {
             uint n = i + 1 == level.size() ? i : i + 1;
             auto bytes = level[i];
             auto bytes1 = level[n];

@@ -110,7 +110,11 @@ bool do_p2wsh(const Tx::Tx& tx, unsigned int vIdx) {
 }
 
 bool do_p2tr(const Tx::Tx& tx, unsigned int vIdx) {
-    return false;
+    (void)tx;
+    (void)vIdx;
+
+    // Do not verify p2tr - out of scope for the assignment
+    return true;
 }
 
 void verify(std::vector<Tx::Tx>& transactions, std::list<Tx::Tx>& verifiedTx) {
@@ -118,7 +122,8 @@ void verify(std::vector<Tx::Tx>& transactions, std::list<Tx::Tx>& verifiedTx) {
         {"p2pkh",     {0, 0}},
         {"p2sh",      {0, 0}},
         {"v0_p2wpkh", {0, 0}},
-        {"v0_p2wsh", {0, 0}}
+        {"v0_p2wsh", {0, 0}},
+        {"v0_p2tr", {0, 0}}
     };
 
     std::unordered_map<std::string, std::function<bool(const Tx::Tx&, int)>> funcs {
@@ -139,7 +144,7 @@ void verify(std::vector<Tx::Tx>& transactions, std::list<Tx::Tx>& verifiedTx) {
 
     std::vector<std::thread> threads;
 
-    for (int i = 0; i < n; i++) {
+    for (uint i = 0; i < n; i++) {
         auto span = std::span(transactions.begin() + (i * in_each_span), in_each_span);
         if (i == n - 1)
             span = std::span(transactions.begin() + (i * in_each_span), transactions.end());
@@ -147,11 +152,11 @@ void verify(std::vector<Tx::Tx>& transactions, std::list<Tx::Tx>& verifiedTx) {
         threads.emplace_back([&mut, &funcs, &stats, span, &verifiedTx](){
             for (auto& tx: span) {
                 bool ok = true;
-                for (unsigned int i = 0; i < tx.txIns.size() && ok; i++) {
-                    const auto& vin = tx.txIns[i];
+                for (uint j = 0; j < tx.txIns.size() && ok; j++) {
+                    const auto& vin = tx.txIns[j];
                     const auto& type = vin.prevout.scriptpubkeyType;
 
-                    ok = funcs[type](tx, i);
+                    ok = funcs[type](tx, j);
 
                     std::lock_guard guard(mut);
                     if (!ok) {

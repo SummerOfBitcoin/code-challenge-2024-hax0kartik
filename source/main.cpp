@@ -25,8 +25,6 @@ int main() {
     //auto file { "../mempool/0e6535a4e5d8f1ee0507afb9adebaadab9e7c306f6db80fda4fe497ce64ade95.json" }; // p2wsh
 
     Mempool mempool;
-    //mempool.addFile("../mempool/0a8b21af1cfcc26774df1f513a72cd362a14f5a598ec39d915323078efb5a240.json"); // p2pkh
-    //mempool.addFile("../mempool/0af55b69fab549b98d1f7ec5100b738dad4b520384b3b8f9ff38b25ad1e2940a.json"); // p2wpkh
 
     mempool.initFromFolder("../mempool");
 
@@ -42,9 +40,9 @@ int main() {
     for (auto it = verified.begin(); it != verified.end(); it++) {
         auto& t = *it;
         //std::cout << t.txidHash << " Fee: " << t.fees << std::endl;
-        if (weight + t.weight > 4000000) {
+        if (weight + t.weight + 1000 > 4000000) { // keep a dfference of 1000 from max
             //std::cout << "Max free reached! " << fee << "Total weight: " << weight << "\n";
-            break;
+            continue;
         }
 
         fee += t.fees;
