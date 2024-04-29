@@ -98,7 +98,9 @@ int main() {
 
     Block block;
     block.version = 0x20000000;
-    static constexpr auto target = "0000ffff00000000000000000000000000000000000000000000000000000000";
+
+    //target = "0000ffff00000000000000000000000000000000000000000000000000000000"
+
     static constexpr auto bits = 0x1f00ffff;
     block.bits = bits;
     block.prevBlkHash = zeroesVec;
