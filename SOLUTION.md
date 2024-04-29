@@ -59,8 +59,8 @@ for (every tx in verifiedList) {
 	if (weight + tx.weight > 4000000) 
 		continue; // not break
 ..
-weight += tx.weight;
-includeTx
+	weight += tx.weight;
+	includeTx
 }
 ```
 
@@ -76,15 +76,17 @@ After a block is mined, the block header followed by the serialized coinbase tra
 
 ## Results and performance
 
-![Score](docs/score.png)
+<img src="docs/score.png" width="600">
+
 The autograder grades my solution with the score of `104/100` which I believe is pretty good.
 
 Talking about efficiency, my solution is able to complete all steps within a single minute on my machine.
 
-![time](docs/time.png)
+<img src="docs/time.png" width="150">
 
 The specs for my machine are as follows:
-![specs](docs/specs.png)
+
+<img src="docs/specs.png" width="350">
 
 I should note that optimization level is set to `-O3` for the above test. 
 
